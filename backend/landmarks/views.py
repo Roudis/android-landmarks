@@ -3,6 +3,7 @@ from rest_framework import viewsets, status
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from django_filters import rest_framework as filters
+from django.views.generic import ListView
 from .models import Landmark
 from .serializers import LandmarkSerializer
 import logging
@@ -64,3 +65,25 @@ class LandmarkViewSet(viewsets.ModelViewSet):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class LandmarkListView(ListView):
+    model = Landmark
+    template_name = 'landmarks/landmark_list.html'
+    context_object_name = 'landmarks'
+
+    def get_queryset(self):
+        queryset = Landmark.objects.all()
+        search = self.request.GET.get('search')
+        category = self.request.GET.get('category')
+
+        if search:
+            queryset = queryset.filter(title__icontains=search)
+        if category:
+            queryset = queryset.filter(category=category)
+
+        return queryset.order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categories'] = Landmark.CATEGORY_CHOICES
+        return context

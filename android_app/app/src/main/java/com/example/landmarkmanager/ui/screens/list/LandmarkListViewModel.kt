@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.landmarkmanager.data.model.Landmark
 import com.example.landmarkmanager.data.repository.LandmarkRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -18,13 +20,18 @@ class LandmarkListViewModel @Inject constructor(
     private val _state = MutableStateFlow<LandmarkListState>(LandmarkListState.Loading)
     val state: StateFlow<LandmarkListState> = _state
 
+    private var searchJob: Job? = null
+
     init {
         loadLandmarks()
     }
 
     fun loadLandmarks(category: String? = null, title: String? = null) {
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             _state.value = LandmarkListState.Loading
+            // Add a small delay to prevent too many API calls while typing
+            delay(300)
             repository.getLandmarks(category, title)
                 .onSuccess { landmarks ->
                     _state.value = LandmarkListState.Success(landmarks)
