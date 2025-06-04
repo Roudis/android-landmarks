@@ -10,7 +10,7 @@ class Landmark(models.Model):
     ]
 
     title = models.CharField(max_length=200, null=True, blank=True)
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, null=True, blank=True)
+    category = models.CharField(max_length=100, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     cover_image = models.ImageField(upload_to='landmarks/', null=True, blank=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
