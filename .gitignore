@@ -1,0 +1,45 @@
+# Android
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Android app specific
+android_app/app/build/
+android_app/.gradle/
+android_app/local.properties
+android_app/.idea/
+
+# Python/Django
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.sqlite3
+db.sqlite3
+/static
+/media
+*.log
+
+# IDE
+.vscode/
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db 

@@ -1,0 +1,28 @@
+Topic 1
+"Development of a client-server application for landmark management"
+Client Application
+Initially, you
+will develop an appropriate Android application which will play the role of the 'Client'. This
+application should initially present appropriate filters to the user to select the entries they are
+interested in (category, title, etc.). Then the application will submit these filters to a webservice, which
+after searching the database will return the matching entries in JSON format. The results should be
+presented with an appropriately formatted list.
+The user will be able to browse the list and select a specific landmark. Then a new screen will open,
+where the details of the landmark will be presented in a more detailed way. This screen should also
+have a special button which when pressed should display the landmark on Google Maps.
+It is desirable for the application to allow the addition of new entries to the existing ones. Indicatively,
+some elements that should be necessary for the insertion of a new entry: Title, Category, Description,
+Cover Image, etc. Specifically for the cover image, the application should allow taking and inserting a
+photo from the camera.
+Web Application
+Next, you
+will develop a web application for managing the landmark database. The elements that you
+should maintain are e.g.: Title, Category, Description, Cover Image, etc.
+You should appropriately design your Database and fill it with appropriate entries.
+Web Service
+Finally, you should implement a Web-Service which will accept requests with filters from the Android
+application and should respond with the list of landmarks that match the user's criteria.
+The response should be in JSON format. The Web-Service should be able to operate either with one,
+or with more filters, or without any filters at all, in which case it should return the complete list of data.
+For example, the user should be able to search for landmarks that belong to the category "Religious
+Tourism" and their title contains the word "Monastery"
