@@ -34,7 +34,6 @@ fun LandmarkDetailScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val showDeleteDialog = remember { mutableStateOf(false) }
-    val showMenu = remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     // Delete confirmation dialog
@@ -77,48 +76,10 @@ fun LandmarkDetailScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                actions = {
-                    // Delete action
-                    IconButton(
-                        onClick = { showDeleteDialog.value = true }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete landmark",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
-                    // Menu
-                    Box {
-                        IconButton(onClick = { showMenu.value = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                        }
-                        DropdownMenu(
-                            expanded = showMenu.value,
-                            onDismissRequest = { showMenu.value = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                },
-                                onClick = {
-                                    showMenu.value = false
-                                    showDeleteDialog.value = true
-                                }
-                            )
-                        }
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White,
-                    actionIconContentColor = Color.White
+                    navigationIconContentColor = Color.White
                 )
             )
         }
@@ -170,13 +131,6 @@ fun LandmarkDetailScreen(
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Location: ${String.format("%.6f", landmark.latitude)}, ${String.format("%.6f", landmark.longitude)}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
                         
                         // View on Map Button
                         Spacer(modifier = Modifier.height(24.dp))
@@ -203,6 +157,31 @@ fun LandmarkDetailScreen(
                             Text(
                                 text = "View on Map",
                                 style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+
+                        // Delete Button
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { showDeleteDialog.value = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Delete Landmark",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
                     }

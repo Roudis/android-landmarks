@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, parsers
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from django_filters import rest_framework as filters
@@ -27,6 +27,7 @@ class LandmarkViewSet(viewsets.ModelViewSet):
     filterset_class = LandmarkFilter
     search_fields = ['title', 'description', 'category']
     pagination_class = None  # Disable pagination for this endpoint
+    parser_classes = (parsers.MultiPartParser, parsers.FormParser)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -35,12 +36,51 @@ class LandmarkViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         try:
-            # Log the incoming data for debugging
-            logger.info(f"Received data: {request.data}")
-            logger.info(f"Content type: {request.content_type}")
+            # Detailed request logging
+            logger.info("=== Request Debug Information ===")
+            logger.info(f"Request Method: {request.method}")
+            logger.info(f"Request Content-Type: {request.content_type}")
+            logger.info(f"Request Headers: {request.headers}")
+            logger.info(f"Request POST data: {request.POST}")
+            logger.info(f"Request data: {request.data}")
+            logger.info(f"Request FILES: {request.FILES}")
+            logger.info(f"Request FILES keys: {list(request.FILES.keys())}")
+            
+            if request.FILES:
+                for file_key in request.FILES:
+                    file = request.FILES[file_key]
+                    logger.info(f"File '{file_key}' details:")
+                    logger.info(f"  - Name: {file.name}")
+                    logger.info(f"  - Size: {file.size}")
+                    logger.info(f"  - Content Type: {file.content_type}")
+            else:
+                logger.warning("No files found in request.FILES")
+                if 'cover_image' in request.data:
+                    logger.info("Cover image found in request.data")
+                    logger.info(f"Cover image type: {type(request.data['cover_image'])}")
+                    logger.info(f"Cover image value: {request.data['cover_image']}")
 
             # Create a mutable copy of the data
             data = request.data.copy()
+
+            # Handle image file
+            if 'cover_image' in request.FILES:
+                logger.info("Cover image found in request.FILES")
+                data['cover_image'] = request.FILES['cover_image']
+                logger.info(f"Image file name: {request.FILES['cover_image'].name}")
+            elif 'cover_image' in request.data:
+                logger.info("Cover image found in request.data")
+                if hasattr(request.data['cover_image'], 'name'):
+                    data['cover_image'] = request.data['cover_image']
+                    logger.info(f"Image file name from data: {request.data['cover_image'].name}")
+            else:
+                logger.warning("No cover_image found in request")
+
+            # Explicitly set empty coordinates to None
+            if 'latitude' not in data or data['latitude'] in ['', None, '0.0']:
+                data['latitude'] = None
+            if 'longitude' not in data or data['longitude'] in ['', None, '0.0']:
+                data['longitude'] = None
 
             # Create the serializer with the data
             serializer = self.get_serializer(data=data)
@@ -54,7 +94,15 @@ class LandmarkViewSet(viewsets.ModelViewSet):
                 )
 
             # Save the landmark
-            self.perform_create(serializer)
+            landmark = self.perform_create(serializer)
+            logger.info(f"Landmark created successfully with id: {serializer.instance.id}")
+            
+            # Verify image after save
+            if serializer.instance.cover_image:
+                logger.info(f"Image saved successfully at: {serializer.instance.cover_image.path}")
+            else:
+                logger.warning("No image was saved with the landmark")
+
             return Response(
                 serializer.data,
                 status=status.HTTP_201_CREATED
@@ -65,6 +113,9 @@ class LandmarkViewSet(viewsets.ModelViewSet):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    def perform_create(self, serializer):
+        return serializer.save()
 
 class LandmarkListView(ListView):
     model = Landmark

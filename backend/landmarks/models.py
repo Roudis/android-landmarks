@@ -21,5 +21,13 @@ class Landmark(models.Model):
     def __str__(self):
         return self.title or 'Untitled Landmark'
 
+    def save(self, *args, **kwargs):
+        # Ensure coordinates are None if they are empty strings or "0.0"
+        if self.latitude in ['', '0.0', 0.0]:
+            self.latitude = None
+        if self.longitude in ['', '0.0', 0.0]:
+            self.longitude = None
+        super().save(*args, **kwargs)
+
     class Meta:
         ordering = ['-created_at']

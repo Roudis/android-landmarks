@@ -6,8 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,9 +16,8 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.background
-import android.widget.Toast
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.TextFieldValue
 
 @Composable
 fun LandmarkListScreen(
@@ -28,12 +26,52 @@ fun LandmarkListScreen(
     viewModel: LandmarkListViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    var isSearchVisible by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf(TextFieldValue()) }
     
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Landmarks") }
-            )
+            if (isSearchVisible) {
+                TopAppBar(
+                    title = {
+                        TextField(
+                            value = searchQuery,
+                            onValueChange = { 
+                                searchQuery = it
+                                viewModel.loadLandmarks(title = it.text)
+                            },
+                            placeholder = { Text("Search landmarks...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            colors = TextFieldDefaults.textFieldColors(
+                                backgroundColor = Color.Transparent,
+                                cursorColor = Color.White,
+                                textColor = Color.White,
+                                placeholderColor = Color.White.copy(alpha = 0.7f)
+                            )
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { 
+                            isSearchVisible = false
+                            searchQuery = TextFieldValue("")
+                            viewModel.loadLandmarks()
+                        }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Close Search")
+                        }
+                    },
+                    backgroundColor = MaterialTheme.colors.primary
+                )
+            } else {
+                TopAppBar(
+                    title = { Text("Landmarks") },
+                    actions = {
+                        IconButton(onClick = { isSearchVisible = true }) {
+                            Icon(Icons.Default.Search, contentDescription = "Search")
+                        }
+                    }
+                )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onNavigateToAdd) {
@@ -80,23 +118,15 @@ fun LandmarkListScreen(
                                     }
                                 }
                                 Column(modifier = Modifier.padding(16.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = landmark.title,
-                                                style = MaterialTheme.typography.h6
-                                            )
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text(
-                                                text = landmark.category,
-                                                style = MaterialTheme.typography.body2
-                                            )
-                                        }
-                                    }
+                                    Text(
+                                        text = landmark.title,
+                                        style = MaterialTheme.typography.h6
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = landmark.category,
+                                        style = MaterialTheme.typography.body2
+                                    )
                                     if (landmark.description.isNotEmpty()) {
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Text(
