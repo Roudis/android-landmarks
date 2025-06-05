@@ -30,6 +30,19 @@ class LandmarkDetailViewModel @Inject constructor(
                 }
         }
     }
+
+    fun deleteLandmark(id: Int, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _state.value = LandmarkDetailState.Loading
+            repository.deleteLandmark(id)
+                .onSuccess {
+                    onSuccess()
+                }
+                .onFailure { error ->
+                    _state.value = LandmarkDetailState.Error(error.message ?: "Failed to delete landmark")
+                }
+        }
+    }
 }
 
 sealed class LandmarkDetailState {

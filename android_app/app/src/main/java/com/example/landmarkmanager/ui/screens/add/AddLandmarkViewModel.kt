@@ -47,15 +47,19 @@ class AddLandmarkViewModel @Inject constructor(
 
                     // Create MultipartBody.Part from the file
                     val requestBody = tempFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
-                    MultipartBody.Part.createFormData("image", tempFile.name, requestBody)
+                    MultipartBody.Part.createFormData("cover_image", "image.jpg", requestBody)
                 }
+
+                // Only send coordinates if they are not 0.0
+                val finalLatitude = if (latitude != 0.0) latitude else null
+                val finalLongitude = if (longitude != 0.0) longitude else null
 
                 repository.createLandmark(
                     title = title,
                     category = category,
                     description = description.ifEmpty { "No description provided" },
-                    latitude = latitude,
-                    longitude = longitude,
+                    latitude = finalLatitude,
+                    longitude = finalLongitude,
                     image = image
                 ).onSuccess {
                     _state.value = AddLandmarkState.Success

@@ -14,14 +14,17 @@ interface LandmarkApi {
     @GET("landmarks/{id}/")
     suspend fun getLandmark(@Path("id") id: Int): Landmark
 
+    @DELETE("landmarks/{id}/")
+    suspend fun deleteLandmark(@Path("id") id: Int)
+
     @FormUrlEncoded
     @POST("landmarks/")
     suspend fun createLandmark(
         @Field("title") title: String,
         @Field("category") category: String,
         @Field("description") description: String,
-        @Field("latitude") latitude: Double,
-        @Field("longitude") longitude: Double
+        @Field("latitude") latitude: Double?,
+        @Field("longitude") longitude: Double?
     ): Landmark
 
     @Multipart
@@ -32,6 +35,6 @@ interface LandmarkApi {
         @Part("description") description: String,
         @Part("latitude") latitude: String,
         @Part("longitude") longitude: String,
-        @Part image: MultipartBody.Part
+        @Part cover_image: MultipartBody.Part
     ): Landmark
 } 

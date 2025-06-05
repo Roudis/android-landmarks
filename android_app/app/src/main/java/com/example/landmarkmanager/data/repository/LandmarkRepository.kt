@@ -26,12 +26,21 @@ class LandmarkRepository @Inject constructor(
         }
     }
 
+    suspend fun deleteLandmark(id: Int): Result<Unit> {
+        return try {
+            api.deleteLandmark(id)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun createLandmark(
         title: String,
         category: String,
         description: String,
-        latitude: Double,
-        longitude: Double,
+        latitude: Double?,
+        longitude: Double?,
         image: MultipartBody.Part?
     ): Result<Landmark> {
         return try {
@@ -40,9 +49,9 @@ class LandmarkRepository @Inject constructor(
                     title = title,
                     category = category,
                     description = description,
-                    latitude = latitude.toString(),
-                    longitude = longitude.toString(),
-                    image = image
+                    latitude = latitude?.toString() ?: "",
+                    longitude = longitude?.toString() ?: "",
+                    cover_image = image
                 )
             } else {
                 api.createLandmark(

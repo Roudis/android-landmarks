@@ -45,10 +45,7 @@ class MainActivity : ComponentActivity() {
                             val id = backStackEntry.arguments?.getInt("id") ?: return@composable
                             LandmarkDetailScreen(
                                 landmarkId = id,
-                                onNavigateBack = { navController.popBackStack() },
-                                onNavigateToMap = { latitude, longitude, title ->
-                                    navController.navigate(Screen.LandmarkMap.createRoute(latitude, longitude, title))
-                                }
+                                onNavigateBack = { navController.popBackStack() }
                             )
                         }
                         

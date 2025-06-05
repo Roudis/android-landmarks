@@ -7,15 +7,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.example.landmarkmanager.data.model.LandmarkCategory
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
+import android.widget.Toast
 
 @Composable
 fun LandmarkListScreen(
@@ -23,47 +27,31 @@ fun LandmarkListScreen(
     onNavigateToAdd: () -> Unit,
     viewModel: LandmarkListViewModel = hiltViewModel()
 ) {
+    var showDeleteDialog by remember { mutableStateOf<Int?>(null) }
+    val context = LocalContext.current
+    
     val state by viewModel.state.collectAsState()
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf<LandmarkCategory?>(null) }
-    var showCategoryDialog by remember { mutableStateOf(false) }
 
-    if (showCategoryDialog) {
+    // Delete confirmation dialog
+    showDeleteDialog?.let { landmarkId ->
         AlertDialog(
-            onDismissRequest = { showCategoryDialog = false },
-            title = { Text("Select Category") },
-            text = {
-                Column {
-                    LandmarkCategory.values().forEach { category ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    selectedCategory = if (selectedCategory == category) null else category
-                                    viewModel.loadLandmarks(
-                                        category = selectedCategory?.apiValue,
-                                        title = searchQuery.takeIf { it.isNotBlank() }
-                                    )
-                                    showCategoryDialog = false
-                                }
-                                .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(category.displayName)
-                            if (selectedCategory == category) {
-                                Icon(
-                                    imageVector = Icons.Default.FilterList,
-                                    contentDescription = "Selected"
-                                )
-                            }
-                        }
+            onDismissRequest = { showDeleteDialog = null },
+            title = { Text("Delete Landmark") },
+            text = { Text("Are you sure you want to delete this landmark?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteLandmark(landmarkId)
+                        Toast.makeText(context, "Landmark deleted successfully", Toast.LENGTH_SHORT).show()
+                        showDeleteDialog = null
                     }
+                ) {
+                    Text("Delete", color = MaterialTheme.colors.error)
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { showCategoryDialog = false }) {
-                    Text("Close")
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = null }) {
+                    Text("Cancel")
                 }
             }
         )
@@ -72,15 +60,7 @@ fun LandmarkListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Landmarks") },
-                actions = {
-                    IconButton(onClick = { showCategoryDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = "Filter by category"
-                        )
-                    }
-                }
+                title = { Text("Landmarks") }
             )
         },
         floatingActionButton = {
@@ -89,93 +69,98 @@ fun LandmarkListScreen(
             }
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { 
-                    searchQuery = it
-                    viewModel.loadLandmarks(
-                        category = selectedCategory?.apiValue,
-                        title = it.takeIf { it.isNotBlank() }
-                    )
-                },
-                placeholder = { Text("Search landmarks") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            )
-
-            // Category Chip (if selected)
-            selectedCategory?.let { category ->
-                Surface(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colors.primary.copy(alpha = 0.1f)
+        when (state) {
+            is LandmarkListState.Loading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .clickable { showCategoryDialog = true },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Category: ${category.displayName}",
-                            style = MaterialTheme.typography.body2,
-                            color = MaterialTheme.colors.primary
-                        )
-                    }
+                    CircularProgressIndicator()
                 }
             }
-
-            when (state) {
-                is LandmarkListState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is LandmarkListState.Success -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items((state as LandmarkListState.Success).landmarks) { landmark ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                                    .clickable { onNavigateToDetail(landmark.id) },
-                                elevation = 4.dp
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = landmark.title,
-                                            style = MaterialTheme.typography.h6
-                                        )
-                                        Text(
-                                            text = landmark.category,
-                                            style = MaterialTheme.typography.body2
-                                        )
-                                    }
-                                    landmark.imageUrl?.let { url ->
+            is LandmarkListState.Success -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                ) {
+                    items((state as LandmarkListState.Success).landmarks) { landmark ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .clickable { onNavigateToDetail(landmark.id) },
+                            elevation = 4.dp
+                        ) {
+                            Column {
+                                if (landmark.imageUrl != null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(200.dp)
+                                    ) {
                                         AsyncImage(
-                                            model = url,
+                                            model = landmark.imageUrl,
                                             contentDescription = landmark.title,
-                                            modifier = Modifier.size(64.dp)
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        // Delete button overlay
+                                        IconButton(
+                                            onClick = { showDeleteDialog = landmark.id },
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .padding(8.dp)
+                                                .background(
+                                                    color = MaterialTheme.colors.surface.copy(alpha = 0.7f),
+                                                    shape = CircleShape
+                                                )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete landmark",
+                                                tint = MaterialTheme.colors.error
+                                            )
+                                        }
+                                    }
+                                }
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = landmark.title,
+                                                style = MaterialTheme.typography.h6
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = landmark.category,
+                                                style = MaterialTheme.typography.body2
+                                            )
+                                        }
+                                        if (landmark.imageUrl == null) {
+                                            // Show delete button here if there's no image
+                                            IconButton(
+                                                onClick = { showDeleteDialog = landmark.id }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = "Delete landmark",
+                                                    tint = MaterialTheme.colors.error
+                                                )
+                                            }
+                                        }
+                                    }
+                                    if (landmark.description.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = landmark.description,
+                                            style = MaterialTheme.typography.body2,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 }
@@ -183,13 +168,16 @@ fun LandmarkListScreen(
                         }
                     }
                 }
-                is LandmarkListState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text((state as LandmarkListState.Error).message)
-                    }
+            }
+            is LandmarkListState.Error -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = (state as LandmarkListState.Error).message,
+                        color = MaterialTheme.colors.error
+                    )
                 }
             }
         }
