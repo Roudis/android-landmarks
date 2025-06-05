@@ -27,36 +27,8 @@ fun LandmarkListScreen(
     onNavigateToAdd: () -> Unit,
     viewModel: LandmarkListViewModel = hiltViewModel()
 ) {
-    var showDeleteDialog by remember { mutableStateOf<Int?>(null) }
-    val context = LocalContext.current
-    
     val state by viewModel.state.collectAsState()
-
-    // Delete confirmation dialog
-    showDeleteDialog?.let { landmarkId ->
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = null },
-            title = { Text("Delete Landmark") },
-            text = { Text("Are you sure you want to delete this landmark?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteLandmark(landmarkId)
-                        Toast.makeText(context, "Landmark deleted successfully", Toast.LENGTH_SHORT).show()
-                        showDeleteDialog = null
-                    }
-                ) {
-                    Text("Delete", color = MaterialTheme.colors.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
+    
     Scaffold(
         topBar = {
             TopAppBar(
@@ -105,23 +77,6 @@ fun LandmarkListScreen(
                                             modifier = Modifier.fillMaxSize(),
                                             contentScale = ContentScale.Crop
                                         )
-                                        // Delete button overlay
-                                        IconButton(
-                                            onClick = { showDeleteDialog = landmark.id },
-                                            modifier = Modifier
-                                                .align(Alignment.TopEnd)
-                                                .padding(8.dp)
-                                                .background(
-                                                    color = MaterialTheme.colors.surface.copy(alpha = 0.7f),
-                                                    shape = CircleShape
-                                                )
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = "Delete landmark",
-                                                tint = MaterialTheme.colors.error
-                                            )
-                                        }
                                     }
                                 }
                                 Column(modifier = Modifier.padding(16.dp)) {
@@ -140,18 +95,6 @@ fun LandmarkListScreen(
                                                 text = landmark.category,
                                                 style = MaterialTheme.typography.body2
                                             )
-                                        }
-                                        if (landmark.imageUrl == null) {
-                                            // Show delete button here if there's no image
-                                            IconButton(
-                                                onClick = { showDeleteDialog = landmark.id }
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Delete,
-                                                    contentDescription = "Delete landmark",
-                                                    tint = MaterialTheme.colors.error
-                                                )
-                                            }
                                         }
                                     }
                                     if (landmark.description.isNotEmpty()) {
