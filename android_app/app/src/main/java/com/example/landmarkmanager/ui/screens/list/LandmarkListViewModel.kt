@@ -26,29 +26,36 @@ class LandmarkListViewModel @Inject constructor(
         loadLandmarks()
     }
 
-    fun loadLandmarks(category: String? = null, title: String? = null) {
+    fun loadLandmarks(title: String? = null) {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            _state.value = LandmarkListState.Loading
-            // Add a small delay to prevent too many API calls while typing
-            delay(300)
-            repository.getLandmarks(category, title)
-                .onSuccess { landmarks ->
-                    _state.value = LandmarkListState.Success(landmarks)
-                }
-                .onFailure { error ->
-                    _state.value = LandmarkListState.Error(error.message ?: "Unknown error")
-                }
+            try {
+                _state.value = LandmarkListState.Loading
+                // Add a small delay for debouncing
+                delay(300)
+                
+                // Only search if title is not empty
+                val searchTitle = if (!title.isNullOrBlank()) title else null
+                
+                repository.getLandmarks(title = searchTitle)
+                    .onSuccess { landmarks ->
+                        _state.value = LandmarkListState.Success(landmarks)
+                    }
+                    .onFailure { error ->
+                        _state.value = LandmarkListState.Error(error.message ?: "Failed to load landmarks")
+                    }
+            } catch (e: Exception) {
+                _state.value = LandmarkListState.Error("An error occurred while loading landmarks")
+            }
         }
     }
 
-    fun deleteLandmark(id: Int) {
+    fun deleteLandmark(id: Int, onSuccess: () -> Unit) {
         viewModelScope.launch {
-            _state.value = LandmarkListState.Loading
             repository.deleteLandmark(id)
                 .onSuccess {
-                    // Reload the landmarks list after successful deletion
-                    loadLandmarks()
+                    onSuccess()
+                    loadLandmarks() // Reload the list after successful deletion
                 }
                 .onFailure { error ->
                     _state.value = LandmarkListState.Error(error.message ?: "Failed to delete landmark")
