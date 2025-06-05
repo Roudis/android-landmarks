@@ -1,19 +1,14 @@
 package com.example.landmarkmanager.ui.screens.add
 
-import android.content.Context
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.landmarkmanager.data.model.Landmark
 import com.example.landmarkmanager.data.repository.LandmarkRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
-import java.io.FileOutputStream
 import javax.inject.Inject
 
 @HiltViewModel
@@ -26,48 +21,29 @@ class AddLandmarkViewModel @Inject constructor(
 
     fun addLandmark(
         title: String,
-        category: String = "OTHER",
-        description: String = "",
-        latitude: Double = 0.0,
-        longitude: Double = 0.0,
-        imageUri: Uri? = null,
-        context: Context
+        description: String,
+        category: String,
+        imageFile: File?,
+        latitude: Double?,
+        longitude: Double?
     ) {
         viewModelScope.launch {
             _state.value = AddLandmarkState.Loading
             try {
-                val image = imageUri?.let { uri ->
-                    // Create a temporary file to store the image
-                    val tempFile = File(context.cacheDir, "temp_image_${System.currentTimeMillis()}.jpg")
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        FileOutputStream(tempFile).use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-
-                    // Create MultipartBody.Part from the file
-                    val requestBody = tempFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
-                    MultipartBody.Part.createFormData("cover_image", "image.jpg", requestBody)
-                }
-
-                // Only send coordinates if they are not 0.0
-                val finalLatitude = if (latitude != 0.0) latitude else null
-                val finalLongitude = if (longitude != 0.0) longitude else null
-
-                repository.createLandmark(
+                repository.addLandmark(
                     title = title,
+                    description = description,
                     category = category,
-                    description = description.ifEmpty { "No description provided" },
-                    latitude = finalLatitude,
-                    longitude = finalLongitude,
-                    image = image
-                ).onSuccess {
-                    _state.value = AddLandmarkState.Success
+                    imageFile = imageFile,
+                    latitude = latitude,
+                    longitude = longitude
+                ).onSuccess { landmark ->
+                    _state.value = AddLandmarkState.Success(landmark)
                 }.onFailure { error ->
-                    _state.value = AddLandmarkState.Error(error.message ?: "Failed to save landmark")
+                    _state.value = AddLandmarkState.Error(error.message ?: "Failed to add landmark")
                 }
             } catch (e: Exception) {
-                _state.value = AddLandmarkState.Error(e.message ?: "Unknown error occurred")
+                _state.value = AddLandmarkState.Error(e.message ?: "An unexpected error occurred")
             }
         }
     }
@@ -76,6 +52,6 @@ class AddLandmarkViewModel @Inject constructor(
 sealed class AddLandmarkState {
     object Initial : AddLandmarkState()
     object Loading : AddLandmarkState()
-    object Success : AddLandmarkState()
+    data class Success(val landmark: Landmark) : AddLandmarkState()
     data class Error(val message: String) : AddLandmarkState()
 } 

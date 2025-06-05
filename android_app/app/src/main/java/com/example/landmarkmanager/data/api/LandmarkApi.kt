@@ -2,39 +2,41 @@ package com.example.landmarkmanager.data.api
 
 import com.example.landmarkmanager.data.model.Landmark
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.http.*
 
 interface LandmarkApi {
     @GET("landmarks/")
     suspend fun getLandmarks(
-        @Query("category") category: String? = null,
-        @Query("title") title: String? = null
+        @Query("search") search: String? = null
     ): List<Landmark>
 
     @GET("landmarks/{id}/")
     suspend fun getLandmark(@Path("id") id: Int): Landmark
 
+    @Multipart
+    @POST("landmarks/")
+    suspend fun addLandmark(
+        @Part("title") title: RequestBody,
+        @Part("description") description: RequestBody,
+        @Part("category") category: RequestBody,
+        @Part image: MultipartBody.Part?,
+        @Part("latitude") latitude: RequestBody?,
+        @Part("longitude") longitude: RequestBody?
+    ): Landmark
+
     @DELETE("landmarks/{id}/")
     suspend fun deleteLandmark(@Path("id") id: Int)
 
-    @FormUrlEncoded
-    @POST("landmarks/")
-    suspend fun createLandmark(
-        @Field("title") title: String,
-        @Field("category") category: String,
-        @Field("description") description: String,
-        @Field("latitude") latitude: Double?,
-        @Field("longitude") longitude: Double?
-    ): Landmark
-
     @Multipart
-    @POST("landmarks/")
-    suspend fun createLandmarkWithImage(
-        @Part("title") title: String,
-        @Part("category") category: String,
-        @Part("description") description: String,
-        @Part("latitude") latitude: String,
-        @Part("longitude") longitude: String,
-        @Part cover_image: MultipartBody.Part
+    @PUT("landmarks/{id}/")
+    suspend fun updateLandmark(
+        @Path("id") id: Int,
+        @Part("title") title: RequestBody,
+        @Part("description") description: RequestBody,
+        @Part("category") category: RequestBody,
+        @Part image: MultipartBody.Part?,
+        @Part("latitude") latitude: RequestBody?,
+        @Part("longitude") longitude: RequestBody?
     ): Landmark
 } 

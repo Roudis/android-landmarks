@@ -1,43 +1,57 @@
 package com.example.landmarkmanager.ui.screens.add
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import com.example.landmarkmanager.data.model.LandmarkCategory
-import android.widget.Toast
-import androidx.core.content.FileProvider
+import kotlinx.coroutines.FlowPreview
 import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(FlowPreview::class)
 @Composable
 fun AddLandmarkScreen(
     onNavigateBack: () -> Unit,
     viewModel: AddLandmarkViewModel = hiltViewModel()
 ) {
+    val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(LandmarkCategory.OTHER) }
-    var latitude by remember { mutableStateOf("0.0") }
-    var longitude by remember { mutableStateOf("0.0") }
-    var isDropdownExpanded by remember { mutableStateOf(false) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var latitude by remember { mutableStateOf("") }
+    var longitude by remember { mutableStateOf("") }
+    var isDropdownExpanded by remember { mutableStateOf(false) }
+    var showImageSourceDialog by remember { mutableStateOf(false) }
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
-    
-    val context = LocalContext.current
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -53,35 +67,96 @@ fun AddLandmarkScreen(
         }
     }
 
-    fun createImageFile(): File {
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val imageFileName = "JPEG_${timeStamp}_"
-        val storageDir = context.getExternalFilesDir("Pictures")
-        return File.createTempFile(imageFileName, ".jpg", storageDir)
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            tempCameraUri = createImageUri(context)
+            tempCameraUri?.let { cameraLauncher.launch(it) }
+        }
     }
 
-    val state by viewModel.state.collectAsState()
-
     LaunchedEffect(state) {
-        when (state) {
-            is AddLandmarkState.Success -> {
-                Toast.makeText(context, "Landmark saved successfully!", Toast.LENGTH_SHORT).show()
-                onNavigateBack()
-            }
-            is AddLandmarkState.Error -> {
-                Toast.makeText(context, (state as AddLandmarkState.Error).message, Toast.LENGTH_LONG).show()
-            }
-            else -> {}
+        if (state is AddLandmarkState.Success) {
+            onNavigateBack()
         }
+    }
+
+    if (showImageSourceDialog) {
+        AlertDialog(
+            onDismissRequest = { showImageSourceDialog = false },
+            title = { Text("Choose Image Source") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            showImageSourceDialog = false
+                            galleryLauncher.launch("image/*")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Gallery")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Choose from Gallery")
+                        }
+                    }
+                    Button(
+                        onClick = {
+                            showImageSourceDialog = false
+                            when {
+                                ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.CAMERA
+                                ) == PackageManager.PERMISSION_GRANTED -> {
+                                    tempCameraUri = createImageUri(context)
+                                    tempCameraUri?.let { cameraLauncher.launch(it) }
+                                }
+                                else -> {
+                                    permissionLauncher.launch(Manifest.permission.CAMERA)
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Camera")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Take Photo")
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showImageSourceDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Landmark") },
+                backgroundColor = MaterialTheme.colors.primary,
+                title = { Text("Add Landmark", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
                     }
                 }
             )
@@ -92,27 +167,121 @@ fun AddLandmarkScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Title Field (Required)
+            if (selectedImageUri != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                ) {
+                    AsyncImage(
+                        model = selectedImageUri,
+                        contentDescription = "Selected image",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable { showImageSourceDialog = true },
+                        contentScale = ContentScale.Crop
+                    )
+                    // Add change image button overlay
+                    Button(
+                        onClick = { showImageSourceDialog = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp)
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Change Image")
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Change")
+                        }
+                    }
+                }
+            } else {
+                // Add image placeholder with prominent buttons
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Button(
+                            onClick = {
+                                when {
+                                    ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.CAMERA
+                                    ) == PackageManager.PERMISSION_GRANTED -> {
+                                        tempCameraUri = createImageUri(context)
+                                        tempCameraUri?.let { cameraLauncher.launch(it) }
+                                    }
+                                    else -> {
+                                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = "Take Photo")
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Take Photo")
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Button(
+                            onClick = { galleryLauncher.launch("image/*") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Choose from Gallery")
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Choose from Gallery")
+                            }
+                        }
+                    }
+                }
+            }
+
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Title (Required)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                label = { Text("Title") },
+                modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(16.dp))
 
-            // Category Dropdown (Optional)
+            // Category Dropdown
             Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = selectedCategory.displayName,
                     onValueChange = { },
-                    label = { Text("Category (Optional)") },
+                    label = { Text("Category") },
                     readOnly = true,
                     trailingIcon = {
                         IconButton(onClick = { isDropdownExpanded = true }) {
-                            Icon(Icons.Filled.ArrowDropDown, "Show categories")
+                            Icon(Icons.Default.ArrowDropDown, "Show categories")
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -135,28 +304,22 @@ fun AddLandmarkScreen(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
 
-            // Description Field (Optional)
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Description (Optional)") },
+                label = { Text("Description") },
                 modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
                 maxLines = 5
             )
-            Spacer(modifier = Modifier.height(16.dp))
 
-            // Coordinates Fields (Optional)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
                     value = latitude,
                     onValueChange = { 
-                        // Allow only numeric input
                         if (it.isEmpty() || it.matches(Regex("^-?\\d*\\.?\\d*$"))) {
                             latitude = it
                         }
@@ -164,11 +327,10 @@ fun AddLandmarkScreen(
                     label = { Text("Latitude") },
                     modifier = Modifier.weight(1f)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+
                 OutlinedTextField(
                     value = longitude,
                     onValueChange = { 
-                        // Allow only numeric input
                         if (it.isEmpty() || it.matches(Regex("^-?\\d*\\.?\\d*$"))) {
                             longitude = it
                         }
@@ -177,84 +339,65 @@ fun AddLandmarkScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
-            Spacer(modifier = Modifier.height(16.dp))
 
-            // Image Selection
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Button(
-                    onClick = {
-                        galleryLauncher.launch("image/*")
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Pick from Gallery")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Gallery")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(
-                    onClick = {
-                        try {
-                            val photoFile = createImageFile()
-                            tempCameraUri = FileProvider.getUriForFile(
-                                context,
-                                "${context.packageName}.fileprovider",
-                                photoFile
-                            )
-                            cameraLauncher.launch(tempCameraUri)
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Error creating camera file", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Take Photo")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Camera")
-                }
-            }
-
-            // Selected Image Preview
-            selectedImageUri?.let { uri ->
-                Spacer(modifier = Modifier.height(16.dp))
-                AsyncImage(
-                    model = uri,
-                    contentDescription = "Selected image",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Save Button
             Button(
                 onClick = {
-                    if (title.isBlank()) {
-                        Toast.makeText(context, "Please enter a title", Toast.LENGTH_SHORT).show()
-                        return@Button
+                    val imageFile = selectedImageUri?.let { uri ->
+                        createTempFileFromUri(context, uri)
                     }
-
+                    
                     viewModel.addLandmark(
                         title = title,
-                        category = selectedCategory.apiValue,
                         description = description,
-                        latitude = latitude.toDoubleOrNull() ?: 0.0,
-                        longitude = longitude.toDoubleOrNull() ?: 0.0,
-                        imageUri = selectedImageUri,
-                        context = context
+                        category = selectedCategory.apiValue,
+                        imageFile = imageFile,
+                        latitude = latitude.toDoubleOrNull(),
+                        longitude = longitude.toDoubleOrNull()
                     )
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
+                modifier = Modifier.fillMaxWidth(),
+                enabled = title.isNotBlank() && selectedImageUri != null
             ) {
                 Text("Save Landmark")
             }
+
+            when (state) {
+                is AddLandmarkState.Error -> {
+                    Text(
+                        text = (state as AddLandmarkState.Error).message,
+                        color = MaterialTheme.colors.error,
+                        style = MaterialTheme.typography.body1
+                    )
+                }
+                is AddLandmarkState.Loading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                }
+                else -> {}
+            }
         }
     }
+}
+
+private fun createImageUri(context: Context): Uri? {
+    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+    val imageFileName = "JPEG_${timeStamp}_"
+    val storageDir = context.getExternalFilesDir("landmarks")
+    val imageFile = File.createTempFile(imageFileName, ".jpg", storageDir)
+    return FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        imageFile
+    )
+}
+
+private fun createTempFileFromUri(context: Context, uri: Uri): File {
+    val tempFile = File(context.cacheDir, "temp_image_${System.currentTimeMillis()}.jpg")
+    context.contentResolver.openInputStream(uri)?.use { input ->
+        FileOutputStream(tempFile).use { output ->
+            input.copyTo(output)
+        }
+    }
+    return tempFile
 }
