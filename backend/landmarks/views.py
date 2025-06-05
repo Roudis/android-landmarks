@@ -7,18 +7,20 @@ from django.views.generic import ListView
 from .models import Landmark
 from .serializers import LandmarkSerializer
 import logging
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
 # Create your views here.
 
 class LandmarkFilter(filters.FilterSet):
-    category = filters.CharFilter(lookup_expr='iexact')
-    title = filters.CharFilter(lookup_expr='icontains')
-
     class Meta:
         model = Landmark
-        fields = ['category', 'title']
+        fields = {
+            'category': ['exact', 'icontains'],
+            'title': ['exact', 'icontains'],
+            'description': ['icontains'],
+        }
 
 class LandmarkViewSet(viewsets.ModelViewSet):
     queryset = Landmark.objects.all()
@@ -28,6 +30,29 @@ class LandmarkViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'description', 'category']
     pagination_class = None  # Disable pagination for this endpoint
     parser_classes = (parsers.MultiPartParser, parsers.FormParser)
+
+    def get_queryset(self):
+        queryset = Landmark.objects.all()
+        search_query = self.request.query_params.get('search', None)
+        title = self.request.query_params.get('title', None)
+        category = self.request.query_params.get('category', None)
+        description = self.request.query_params.get('description', None)
+
+        if search_query:
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(category__icontains=search_query)
+            )
+        else:
+            if title:
+                queryset = queryset.filter(title__icontains=title)
+            if category:
+                queryset = queryset.filter(category__icontains=category)
+            if description:
+                queryset = queryset.filter(description__icontains=description)
+
+        return queryset
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -116,6 +141,10 @@ class LandmarkViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         return serializer.save()
+
+    def list(self, request, *args, **kwargs):
+        logger.info(f"Query params: {request.query_params}")
+        return super().list(request, *args, **kwargs)
 
 class LandmarkListView(ListView):
     model = Landmark
