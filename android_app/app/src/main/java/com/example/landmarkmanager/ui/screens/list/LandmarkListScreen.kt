@@ -188,28 +188,29 @@ fun LandmarkListScreen(
                                         .clickable { onNavigateToDetail(landmark.id) },
                                     elevation = 4.dp
                                 ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(8.dp)
-                                    ) {
+                                    Column {
                                         landmark.imageUrl?.let { url ->
                                             AsyncImage(
                                                 model = url,
                                                 contentDescription = "Landmark image",
                                                 modifier = Modifier
-                                                    .size(80.dp)
-                                                    .padding(end = 8.dp),
+                                                    .fillMaxWidth()
+                                                    .height(200.dp),
                                                 contentScale = ContentScale.Crop
                                             )
                                         }
-                                        Column {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp)
+                                        ) {
                                             Text(
                                                 text = landmark.title,
                                                 style = MaterialTheme.typography.h6,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
+                                            Spacer(modifier = Modifier.height(4.dp))
                                             Text(
                                                 text = landmark.category,
                                                 style = MaterialTheme.typography.body2,
