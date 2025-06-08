@@ -1,13 +1,16 @@
 from django.shortcuts import render
-from rest_framework import viewsets, status, parsers
+from rest_framework import viewsets, status, parsers, permissions
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from django_filters import rest_framework as filters
 from django.views.generic import ListView
-from .models import Landmark
-from .serializers import LandmarkSerializer
+from .models import Landmark, User
+from .serializers import LandmarkSerializer, UserSerializer
 import logging
 from django.db.models import Q
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.shortcuts import get_object_or_404
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +25,15 @@ class LandmarkFilter(filters.FilterSet):
             'description': ['icontains'],
         }
 
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    
+    def get_permissions(self):
+        if self.action == 'create':
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
 class LandmarkViewSet(viewsets.ModelViewSet):
     queryset = Landmark.objects.all()
     serializer_class = LandmarkSerializer
@@ -30,34 +42,18 @@ class LandmarkViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'description', 'category']
     pagination_class = None  # Disable pagination for this endpoint
     parser_classes = (parsers.MultiPartParser, parsers.FormParser)
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Landmark.objects.all()
-        search_query = self.request.query_params.get('search', None)
-        title = self.request.query_params.get('title', None)
-        category = self.request.query_params.get('category', None)
-        description = self.request.query_params.get('description', None)
-
-        if search_query:
-            queryset = queryset.filter(
-                Q(title__icontains=search_query) |
-                Q(description__icontains=search_query) |
-                Q(category__icontains=search_query)
-            )
-        else:
-            if title:
-                queryset = queryset.filter(title__icontains=title)
-            if category:
-                queryset = queryset.filter(category__icontains=category)
-            if description:
-                queryset = queryset.filter(description__icontains=description)
-
-        return queryset
+        return Landmark.objects.filter(user=self.request.user)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
     def create(self, request, *args, **kwargs):
         try:
@@ -139,8 +135,15 @@ class LandmarkViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    def perform_create(self, serializer):
-        return serializer.save()
+    @action(detail=True, methods=['post'])
+    def upload_image(self, request, pk=None):
+        landmark = self.get_object()
+        if 'image' not in request.FILES:
+            return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        landmark.image = request.FILES['image']
+        landmark.save()
+        return Response({'message': 'Image uploaded successfully'}, status=status.HTTP_200_OK)
 
     def list(self, request, *args, **kwargs):
         logger.info(f"Query params: {request.query_params}")

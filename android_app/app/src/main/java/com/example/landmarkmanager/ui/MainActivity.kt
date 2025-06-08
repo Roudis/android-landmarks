@@ -3,80 +3,41 @@ package com.example.landmarkmanager.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import com.example.landmarkmanager.ui.navigation.Screen
-import com.example.landmarkmanager.ui.screens.add.AddLandmarkScreen
-import com.example.landmarkmanager.ui.screens.detail.LandmarkDetailScreen
-import com.example.landmarkmanager.ui.screens.list.LandmarkListScreen
-import com.example.landmarkmanager.ui.screens.map.LandmarkMapScreen
+import com.example.landmarkmanager.ui.navigation.AppNavigation
+import com.example.landmarkmanager.ui.theme.LandmarkManagerTheme
+import com.example.landmarkmanager.data.repository.AuthRepository
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var authRepository: AuthRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
-                Surface {
-                    val navController = rememberNavController()
-                    
-                    NavHost(navController = navController, startDestination = Screen.LandmarkList.route) {
-                        composable(Screen.LandmarkList.route) {
-                            LandmarkListScreen(
-                                onNavigateToDetail = { id ->
-                                    navController.navigate(Screen.LandmarkDetail.createRoute(id))
-                                },
-                                onNavigateToAdd = {
-                                    navController.navigate(Screen.AddLandmark.route)
-                                }
-                            )
-                        }
-                        
-                        composable(
-                            route = Screen.LandmarkDetail.route,
-                            arguments = listOf(navArgument("id") { type = NavType.IntType })
-                        ) { backStackEntry ->
-                            val id = backStackEntry.arguments?.getInt("id") ?: return@composable
-                            LandmarkDetailScreen(
-                                landmarkId = id,
-                                onNavigateBack = { navController.popBackStack() }
-                            )
-                        }
-                        
-                        composable(Screen.AddLandmark.route) {
-                            AddLandmarkScreen(
-                                onNavigateBack = { navController.popBackStack() }
-                            )
-                        }
-                        
-                        composable(
-                            route = Screen.LandmarkMap.route,
-                            arguments = listOf(
-                                navArgument("latitude") { type = NavType.StringType },
-                                navArgument("longitude") { type = NavType.StringType },
-                                navArgument("title") { type = NavType.StringType }
-                            )
-                        ) { backStackEntry ->
-                            val latitude = backStackEntry.arguments?.getString("latitude")?.toDoubleOrNull() ?: 0.0
-                            val longitude = backStackEntry.arguments?.getString("longitude")?.toDoubleOrNull() ?: 0.0
-                            val title = backStackEntry.arguments?.getString("title") ?: ""
-                            
-                            LandmarkMapScreen(
-                                latitude = latitude,
-                                longitude = longitude,
-                                title = title,
-                                onBack = { navController.popBackStack() }
-                            )
-                        }
-                    }
-                }
-            }
+            MainScreen(authRepository)
+        }
+    }
+}
+
+@Composable
+fun MainScreen(authRepository: AuthRepository) {
+    LandmarkManagerTheme {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            val navController = rememberNavController()
+            AppNavigation(navController = navController, authRepository = authRepository)
         }
     }
 } 

@@ -12,7 +12,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.update
+
+sealed class LandmarkListState {
+    object Loading : LandmarkListState()
+    data class Success(val landmarks: List<Landmark>) : LandmarkListState()
+    data class Error(val message: String) : LandmarkListState()
+}
 
 @HiltViewModel
 class LandmarkListViewModel @Inject constructor(
@@ -29,39 +34,33 @@ class LandmarkListViewModel @Inject constructor(
         loadLandmarks()
     }
 
-    fun loadLandmarks(query: String? = null) {
-        // Cancel any ongoing search
+    fun loadLandmarks(search: String? = null) {
         searchJob?.cancel()
         
         searchJob = viewModelScope.launch {
             try {
-                // Only show loading for initial load, not during search
-                if (query.isNullOrEmpty() && _state.value !is LandmarkListState.Success) {
+                if (search.isNullOrEmpty() && _state.value !is LandmarkListState.Success) {
                     _state.value = LandmarkListState.Loading
                 }
 
-                // Add debounce delay only for search queries
-                if (!query.isNullOrEmpty()) {
+                if (!search.isNullOrEmpty()) {
                     delay(300)
                 }
 
-                val result = repository.getLandmarks(search = query)
+                val result = repository.getLandmarks(search = search)
                 result.onSuccess { landmarks ->
                     currentLandmarks = landmarks
-                    _state.update { LandmarkListState.Success(landmarks) }
+                    _state.value = LandmarkListState.Success(landmarks)
                 }.onFailure { error ->
-                    // If we have current landmarks and this is a search, keep showing them
-                    if (query.isNullOrEmpty() || currentLandmarks.isEmpty()) {
-                        _state.update { LandmarkListState.Error(error.message ?: "Failed to load landmarks") }
+                    if (search.isNullOrEmpty() || currentLandmarks.isEmpty()) {
+                        _state.value = LandmarkListState.Error(error.message ?: "Failed to load landmarks")
                     }
                 }
             } catch (e: CancellationException) {
-                // Ignore cancellation exceptions
                 throw e
             } catch (e: Exception) {
-                // If we have current landmarks and this is a search, keep showing them
-                if (query.isNullOrEmpty() || currentLandmarks.isEmpty()) {
-                    _state.update { LandmarkListState.Error(e.message ?: "An unexpected error occurred") }
+                if (search.isNullOrEmpty() || currentLandmarks.isEmpty()) {
+                    _state.value = LandmarkListState.Error(e.message ?: "An unexpected error occurred")
                 }
             }
         }
@@ -76,7 +75,7 @@ class LandmarkListViewModel @Inject constructor(
             repository.deleteLandmark(id)
                 .onSuccess {
                     onSuccess()
-                    loadLandmarks() // Reload the list after successful deletion
+                    loadLandmarks()
                 }
                 .onFailure { error ->
                     _state.value = LandmarkListState.Error(error.message ?: "Failed to delete landmark")
@@ -88,10 +87,4 @@ class LandmarkListViewModel @Inject constructor(
         super.onCleared()
         searchJob?.cancel()
     }
-}
-
-sealed class LandmarkListState {
-    object Loading : LandmarkListState()
-    data class Success(val landmarks: List<Landmark>) : LandmarkListState()
-    data class Error(val message: String) : LandmarkListState()
 } 

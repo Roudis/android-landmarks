@@ -20,6 +20,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import kotlinx.coroutines.FlowPreview
+import com.example.landmarkmanager.data.model.Landmark
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
 
 enum class SortOption(val displayName: String) {
     TITLE_ASC("Title (A-Z)"),
@@ -37,14 +40,14 @@ fun LandmarkListScreen(
     onNavigateToAdd: () -> Unit,
     viewModel: LandmarkListViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
-    var isSearchVisible by remember { mutableStateOf(false) }
+    val state by viewModel.state.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
     var searchQuery by remember { mutableStateOf("") }
+    var isSearchVisible by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
     var currentSort by remember { mutableStateOf<SortOption?>(null) }
 
     LaunchedEffect(searchQuery) {
-        viewModel.loadLandmarks(query = searchQuery.takeIf { it.isNotBlank() })
+        viewModel.loadLandmarks(search = searchQuery.takeIf { it.isNotBlank() })
     }
 
     Scaffold(
@@ -76,15 +79,10 @@ fun LandmarkListScreen(
                         )
                     },
                     navigationIcon = {
-                        IconButton(
-                            onClick = {
-                                isSearchVisible = false
-                                searchQuery = ""
-                            }
-                        ) {
+                        IconButton(onClick = { isSearchVisible = false }) {
                             Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Close Search",
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Close search",
                                 tint = Color.White
                             )
                         }
@@ -95,21 +93,48 @@ fun LandmarkListScreen(
                     backgroundColor = MaterialTheme.colors.primary,
                     title = { Text("Landmarks", color = Color.White) },
                     actions = {
-                        // Sort Button
+                        IconButton(onClick = { isSearchVisible = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = Color.White
+                            )
+                        }
                         IconButton(onClick = { showSortMenu = true }) {
                             Icon(
-                                Icons.Default.MoreVert,
+                                imageVector = Icons.Default.MoreVert,
                                 contentDescription = "Sort",
                                 tint = Color.White
                             )
                         }
-                        // Search Button
-                        IconButton(onClick = { isSearchVisible = true }) {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = "Search",
-                                tint = Color.White
-                            )
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                        ) {
+                            SortOption.values().forEach { option ->
+                                DropdownMenuItem(onClick = {
+                                    currentSort = option
+                                    showSortMenu = false
+                                    // Apply sorting here
+                                    when (state) {
+                                        is LandmarkListState.Success -> {
+                                            val landmarks = (state as LandmarkListState.Success).landmarks
+                                            val sortedLandmarks = when (option) {
+                                                SortOption.TITLE_ASC -> landmarks.sortedBy { it.title }
+                                                SortOption.TITLE_DESC -> landmarks.sortedByDescending { it.title }
+                                                SortOption.COUNTRY_ASC -> landmarks.sortedBy { it.country ?: "" }
+                                                SortOption.COUNTRY_DESC -> landmarks.sortedByDescending { it.country ?: "" }
+                                                SortOption.CATEGORY_ASC -> landmarks.sortedBy { it.category }
+                                                SortOption.CATEGORY_DESC -> landmarks.sortedByDescending { it.category }
+                                            }
+                                            viewModel.updateSortedLandmarks(sortedLandmarks)
+                                        }
+                                        else -> {}
+                                    }
+                                }) {
+                                    Text(option.displayName)
+                                }
+                            }
                         }
                     }
                 )
@@ -120,7 +145,11 @@ fun LandmarkListScreen(
                 onClick = onNavigateToAdd,
                 backgroundColor = MaterialTheme.colors.primary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Landmark")
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add landmark",
+                    tint = Color.White
+                )
             }
         }
     ) { padding ->
@@ -129,38 +158,6 @@ fun LandmarkListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Sort Menu
-            DropdownMenu(
-                expanded = showSortMenu,
-                onDismissRequest = { showSortMenu = false }
-            ) {
-                SortOption.values().forEach { option ->
-                    DropdownMenuItem(
-                        onClick = {
-                            currentSort = option
-                            showSortMenu = false
-                            when (state) {
-                                is LandmarkListState.Success -> {
-                                    val landmarks = (state as LandmarkListState.Success).landmarks
-                                    val sortedLandmarks = when (option) {
-                                        SortOption.TITLE_ASC -> landmarks.sortedBy { it.title }
-                                        SortOption.TITLE_DESC -> landmarks.sortedByDescending { it.title }
-                                        SortOption.COUNTRY_ASC -> landmarks.sortedBy { it.country ?: "" }
-                                        SortOption.COUNTRY_DESC -> landmarks.sortedByDescending { it.country ?: "" }
-                                        SortOption.CATEGORY_ASC -> landmarks.sortedBy { it.category }
-                                        SortOption.CATEGORY_DESC -> landmarks.sortedByDescending { it.category }
-                                    }
-                                    viewModel.updateSortedLandmarks(sortedLandmarks)
-                                }
-                                else -> {}
-                            }
-                        }
-                    ) {
-                        Text(option.displayName)
-                    }
-                }
-            }
-
             when (state) {
                 is LandmarkListState.Loading -> {
                     CircularProgressIndicator(
@@ -187,46 +184,42 @@ fun LandmarkListScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                        .padding(8.dp)
                                         .clickable { onNavigateToDetail(landmark.id) },
                                     elevation = 4.dp
                                 ) {
-                                    Column {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(8.dp)
+                                    ) {
                                         landmark.imageUrl?.let { url ->
                                             AsyncImage(
                                                 model = url,
-                                                contentDescription = landmark.title,
+                                                contentDescription = "Landmark image",
                                                 modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(200.dp),
+                                                    .size(80.dp)
+                                                    .padding(end = 8.dp),
                                                 contentScale = ContentScale.Crop
                                             )
                                         }
-                                        Column(modifier = Modifier.padding(16.dp)) {
+                                        Column {
                                             Text(
                                                 text = landmark.title,
-                                                style = MaterialTheme.typography.h6
+                                                style = MaterialTheme.typography.h6,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
-                                            Spacer(modifier = Modifier.height(4.dp))
                                             Text(
                                                 text = landmark.category,
-                                                style = MaterialTheme.typography.body2
+                                                style = MaterialTheme.typography.body2,
+                                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
                                             )
                                             landmark.country?.let { country ->
-                                                Spacer(modifier = Modifier.height(4.dp))
                                                 Text(
                                                     text = country,
                                                     style = MaterialTheme.typography.body2,
-                                                    color = MaterialTheme.colors.secondary
-                                                )
-                                            }
-                                            if (landmark.description.isNotEmpty()) {
-                                                Spacer(modifier = Modifier.height(8.dp))
-                                                Text(
-                                                    text = landmark.description,
-                                                    style = MaterialTheme.typography.body2,
-                                                    maxLines = 2,
-                                                    overflow = TextOverflow.Ellipsis
+                                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
                                                 )
                                             }
                                         }

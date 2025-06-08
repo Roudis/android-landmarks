@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Landmark
+from .models import Landmark, User
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,11 +14,28 @@ class NullableDecimalField(serializers.DecimalField):
             logger.error(f"Error converting decimal value: {data}, error: {str(e)}")
             return None
 
+class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'username', 'password')
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            username=validated_data['username'],
+            password=validated_data['password']
+        )
+        return user
+
 class LandmarkSerializer(serializers.ModelSerializer):
     cover_image = serializers.ImageField(required=False, allow_null=True, allow_empty_file=True)
     latitude = NullableDecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
     longitude = NullableDecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
     country = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    user = UserSerializer(read_only=True)
 
     def get_cover_image_url(self, obj):
         if obj.cover_image:
@@ -66,7 +83,8 @@ class LandmarkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Landmark
-        fields = '__all__'
+        fields = ['id', 'title', 'description', 'category', 'country', 'cover_image', 'latitude', 'longitude', 'created_at', 'updated_at', 'user']
+        read_only_fields = ['created_at', 'updated_at', 'user']
         extra_kwargs = {
             'title': {'required': False},
             'category': {'required': False},
