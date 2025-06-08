@@ -22,7 +22,8 @@ interface LandmarkApi {
         @Part("category") category: RequestBody,
         @Part image: MultipartBody.Part?,
         @Part("latitude") latitude: RequestBody?,
-        @Part("longitude") longitude: RequestBody?
+        @Part("longitude") longitude: RequestBody?,
+        @Part("country") country: RequestBody?
     ): Landmark
 
     @DELETE("landmarks/{id}/")
@@ -37,6 +38,7 @@ interface LandmarkApi {
         @Part("category") category: RequestBody,
         @Part image: MultipartBody.Part?,
         @Part("latitude") latitude: RequestBody?,
-        @Part("longitude") longitude: RequestBody?
+        @Part("longitude") longitude: RequestBody?,
+        @Part("country") country: RequestBody?
     ): Landmark
 } 

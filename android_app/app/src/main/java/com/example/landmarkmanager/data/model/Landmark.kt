@@ -10,5 +10,6 @@ data class Landmark(
     @SerializedName("cover_image")
     val imageUrl: String? = null,
     val latitude: Double,
-    val longitude: Double
+    val longitude: Double,
+    val country: String? = null
 ) 

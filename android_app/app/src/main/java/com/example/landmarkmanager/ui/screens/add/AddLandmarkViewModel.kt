@@ -25,7 +25,8 @@ class AddLandmarkViewModel @Inject constructor(
         category: String,
         imageFile: File?,
         latitude: Double?,
-        longitude: Double?
+        longitude: Double?,
+        country: String?
     ) {
         viewModelScope.launch {
             _state.value = AddLandmarkState.Loading
@@ -36,7 +37,8 @@ class AddLandmarkViewModel @Inject constructor(
                     category = category,
                     imageFile = imageFile,
                     latitude = latitude,
-                    longitude = longitude
+                    longitude = longitude,
+                    country = country
                 ).onSuccess { landmark ->
                     _state.value = AddLandmarkState.Success(landmark)
                 }.onFailure { error ->

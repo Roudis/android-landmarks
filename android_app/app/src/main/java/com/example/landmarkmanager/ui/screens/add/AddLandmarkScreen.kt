@@ -49,6 +49,7 @@ fun AddLandmarkScreen(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var latitude by remember { mutableStateOf("") }
     var longitude by remember { mutableStateOf("") }
+    var country by remember { mutableStateOf("") }
     var isDropdownExpanded by remember { mutableStateOf(false) }
     var showImageSourceDialog by remember { mutableStateOf(false) }
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
@@ -272,6 +273,13 @@ fun AddLandmarkScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            OutlinedTextField(
+                value = country,
+                onValueChange = { country = it },
+                label = { Text("Country") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
             // Category Dropdown
             Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
@@ -352,11 +360,12 @@ fun AddLandmarkScreen(
                         category = selectedCategory.apiValue,
                         imageFile = imageFile,
                         latitude = latitude.toDoubleOrNull(),
-                        longitude = longitude.toDoubleOrNull()
+                        longitude = longitude.toDoubleOrNull(),
+                        country = country
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = title.isNotBlank() && selectedImageUri != null
+                enabled = title.isNotBlank() && selectedImageUri != null && description.isNotBlank()
             ) {
                 Text("Save Landmark")
             }

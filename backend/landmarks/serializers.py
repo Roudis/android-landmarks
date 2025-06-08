@@ -18,6 +18,7 @@ class LandmarkSerializer(serializers.ModelSerializer):
     cover_image = serializers.ImageField(required=False, allow_null=True, allow_empty_file=True)
     latitude = NullableDecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
     longitude = NullableDecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
+    country = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     def get_cover_image_url(self, obj):
         if obj.cover_image:
@@ -76,5 +77,6 @@ class LandmarkSerializer(serializers.ModelSerializer):
                 'use_url': True
             },
             'latitude': {'required': False},
-            'longitude': {'required': False}
+            'longitude': {'required': False},
+            'country': {'required': False}
         } 

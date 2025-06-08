@@ -12,7 +12,8 @@ interface LandmarkRepository {
         category: String,
         imageFile: File?,
         latitude: Double?,
-        longitude: Double?
+        longitude: Double?,
+        country: String?
     ): Result<Landmark>
     suspend fun deleteLandmark(id: Int): Result<Unit>
     suspend fun updateLandmark(
@@ -22,6 +23,7 @@ interface LandmarkRepository {
         category: String,
         imageFile: File?,
         latitude: Double?,
-        longitude: Double?
+        longitude: Double?,
+        country: String?
     ): Result<Landmark>
 } 

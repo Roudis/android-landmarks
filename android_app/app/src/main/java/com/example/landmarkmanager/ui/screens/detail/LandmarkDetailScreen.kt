@@ -124,6 +124,16 @@ fun LandmarkDetailScreen(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
+                        landmark.country?.let { country ->
+                            if (country.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = country,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                            }
+                        }
                         if (landmark.description.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(

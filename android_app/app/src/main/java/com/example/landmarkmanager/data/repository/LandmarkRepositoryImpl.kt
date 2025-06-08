@@ -36,7 +36,8 @@ class LandmarkRepositoryImpl @Inject constructor(
         category: String,
         imageFile: File?,
         latitude: Double?,
-        longitude: Double?
+        longitude: Double?,
+        country: String?
     ): Result<Landmark> {
         return try {
             val titleBody = title.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -44,6 +45,7 @@ class LandmarkRepositoryImpl @Inject constructor(
             val categoryBody = category.toRequestBody("text/plain".toMediaTypeOrNull())
             val latitudeBody = latitude?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
             val longitudeBody = longitude?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
+            val countryBody = country?.toRequestBody("text/plain".toMediaTypeOrNull())
 
             val imagePart = imageFile?.let {
                 MultipartBody.Part.createFormData(
@@ -60,7 +62,8 @@ class LandmarkRepositoryImpl @Inject constructor(
                     category = categoryBody,
                     image = imagePart,
                     latitude = latitudeBody,
-                    longitude = longitudeBody
+                    longitude = longitudeBody,
+                    country = countryBody
                 )
             )
         } catch (e: Exception) {
@@ -84,7 +87,8 @@ class LandmarkRepositoryImpl @Inject constructor(
         category: String,
         imageFile: File?,
         latitude: Double?,
-        longitude: Double?
+        longitude: Double?,
+        country: String?
     ): Result<Landmark> {
         return try {
             val titleBody = title.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -92,6 +96,7 @@ class LandmarkRepositoryImpl @Inject constructor(
             val categoryBody = category.toRequestBody("text/plain".toMediaTypeOrNull())
             val latitudeBody = latitude?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
             val longitudeBody = longitude?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
+            val countryBody = country?.toRequestBody("text/plain".toMediaTypeOrNull())
 
             val imagePart = imageFile?.let {
                 MultipartBody.Part.createFormData(
@@ -109,7 +114,8 @@ class LandmarkRepositoryImpl @Inject constructor(
                     category = categoryBody,
                     image = imagePart,
                     latitude = latitudeBody,
-                    longitude = longitudeBody
+                    longitude = longitudeBody,
+                    country = countryBody
                 )
             )
         } catch (e: Exception) {

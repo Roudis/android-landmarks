@@ -8,6 +8,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +21,15 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import kotlinx.coroutines.FlowPreview
 
+enum class SortOption(val displayName: String) {
+    TITLE_ASC("Title (A-Z)"),
+    TITLE_DESC("Title (Z-A)"),
+    COUNTRY_ASC("Country (A-Z)"),
+    COUNTRY_DESC("Country (Z-A)"),
+    CATEGORY_ASC("Category (A-Z)"),
+    CATEGORY_DESC("Category (Z-A)")
+}
+
 @OptIn(FlowPreview::class)
 @Composable
 fun LandmarkListScreen(
@@ -30,6 +40,8 @@ fun LandmarkListScreen(
     val state by viewModel.state.collectAsState()
     var isSearchVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var showSortMenu by remember { mutableStateOf(false) }
+    var currentSort by remember { mutableStateOf<SortOption?>(null) }
 
     LaunchedEffect(searchQuery) {
         viewModel.loadLandmarks(query = searchQuery.takeIf { it.isNotBlank() })
@@ -83,6 +95,15 @@ fun LandmarkListScreen(
                     backgroundColor = MaterialTheme.colors.primary,
                     title = { Text("Landmarks", color = Color.White) },
                     actions = {
+                        // Sort Button
+                        IconButton(onClick = { showSortMenu = true }) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = "Sort",
+                                tint = Color.White
+                            )
+                        }
+                        // Search Button
                         IconButton(onClick = { isSearchVisible = true }) {
                             Icon(
                                 Icons.Default.Search,
@@ -108,6 +129,38 @@ fun LandmarkListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // Sort Menu
+            DropdownMenu(
+                expanded = showSortMenu,
+                onDismissRequest = { showSortMenu = false }
+            ) {
+                SortOption.values().forEach { option ->
+                    DropdownMenuItem(
+                        onClick = {
+                            currentSort = option
+                            showSortMenu = false
+                            when (state) {
+                                is LandmarkListState.Success -> {
+                                    val landmarks = (state as LandmarkListState.Success).landmarks
+                                    val sortedLandmarks = when (option) {
+                                        SortOption.TITLE_ASC -> landmarks.sortedBy { it.title }
+                                        SortOption.TITLE_DESC -> landmarks.sortedByDescending { it.title }
+                                        SortOption.COUNTRY_ASC -> landmarks.sortedBy { it.country ?: "" }
+                                        SortOption.COUNTRY_DESC -> landmarks.sortedByDescending { it.country ?: "" }
+                                        SortOption.CATEGORY_ASC -> landmarks.sortedBy { it.category }
+                                        SortOption.CATEGORY_DESC -> landmarks.sortedByDescending { it.category }
+                                    }
+                                    viewModel.updateSortedLandmarks(sortedLandmarks)
+                                }
+                                else -> {}
+                            }
+                        }
+                    ) {
+                        Text(option.displayName)
+                    }
+                }
+            }
+
             when (state) {
                 is LandmarkListState.Loading -> {
                     CircularProgressIndicator(
@@ -159,6 +212,14 @@ fun LandmarkListScreen(
                                                 text = landmark.category,
                                                 style = MaterialTheme.typography.body2
                                             )
+                                            landmark.country?.let { country ->
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = country,
+                                                    style = MaterialTheme.typography.body2,
+                                                    color = MaterialTheme.colors.secondary
+                                                )
+                                            }
                                             if (landmark.description.isNotEmpty()) {
                                                 Spacer(modifier = Modifier.height(8.dp))
                                                 Text(

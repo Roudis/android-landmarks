@@ -67,6 +67,10 @@ class LandmarkListViewModel @Inject constructor(
         }
     }
 
+    fun updateSortedLandmarks(sortedLandmarks: List<Landmark>) {
+        _state.value = LandmarkListState.Success(sortedLandmarks)
+    }
+
     fun deleteLandmark(id: Int, onSuccess: () -> Unit) {
         viewModelScope.launch {
             repository.deleteLandmark(id)
